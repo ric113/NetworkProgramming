@@ -5,6 +5,7 @@
 //  Created by Ricky on 2016/10/16.
 //  Copyright © 2016年 Ricky. All rights reserved.
 //
+// 修正 ： |n 是pipe到n行後 , 不是pipe到n個指令後
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -28,6 +29,7 @@ struct pipeFd{
     int EnterPipe ; // 入口
     int OutPipe ;   // 出口
     int count ;     // 記錄須pipe到往後第幾個cmd
+    bool toNext ;
 };
 
 // 當下cmd之Sign .
@@ -42,7 +44,7 @@ enum Sign
 
 void PrintWelcome(int);
 void RunShell(int);
-void ParseCmd(vector<string>& , vector<string>::iterator& , vector<string>& , string& , int& ,int&, Sign&);
+void ParseCmd(vector<string>& , vector<string>::iterator& , vector<string>& , string& , int& ,int&, Sign&, bool&);
 vector<string> SplitWithSpace(const string&);
 void SubPipeCount (vector<pipeFd>&);
 bool LegalCmd(string,vector<string>);
@@ -51,7 +53,7 @@ bool IsBuildIn(string);
 void PipeToSameSetting(vector<pipeFd>&,int&,int&,bool&);
 bool HasInPipe(vector<pipeFd>);
 int RunCmd(int,int,int,int,string,vector<string>,vector<string>);
-void CreateNewPipe(int ,int&, vector<pipeFd>&);
+void CreateNewPipe(int ,int&, vector<pipeFd>&,bool);
 void StdInSetting(int& ,bool&, vector<pipeFd>);
 void ArgtableReset(vector<string>&);
 char** TranVecToCharArr(vector<string>,string);
@@ -68,7 +70,7 @@ void PrintWelcome(int sockfd)
 }
 
 
-void ParseCmd(vector<string> &after_split_line , vector<string>::iterator &it_line , vector<string> &arg_table , string &cmd , int &pipeNum ,int &pipeErrNum , Sign &sign)
+void ParseCmd(vector<string> &after_split_line , vector<string>::iterator &it_line , vector<string> &arg_table , string &cmd , int &pipeNum ,int &pipeErrNum , Sign &sign, bool &PipeToNext)
 {
     char Pnum[5],Enum[5]; // 記錄 | , ! 後的數字 .
     string temp ;
@@ -84,7 +86,10 @@ void ParseCmd(vector<string> &after_split_line , vector<string>::iterator &it_li
         {
             sign = PIPE;
             if(temp.length() == 1)
+            {
+                PipeToNext = true;
                 Pnum[0] = '1' ;
+            }
             else{
                 for(int i = 1 ; i < temp.length() ; i ++)
                 {
@@ -100,7 +105,10 @@ void ParseCmd(vector<string> &after_split_line , vector<string>::iterator &it_li
             sign = ERRPIPE;
             
             if(temp.length() == 1)
+            {
+                PipeToNext = true;
                 Enum[0] = '1' ;
+            }
             else
             {
                 for(int i = 1 ; i < temp.length() ; i ++)
@@ -328,7 +336,7 @@ int RunCmd(int infd,int outfd,int errfd,int sockfd,string cmd,vector<string> arg
     
 }
 
-void CreateNewPipe(int pipeNum ,int &enter , vector<pipeFd> &pipeTable)
+void CreateNewPipe(int pipeNum ,int &enter , vector<pipeFd> &pipeTable, bool PipeToNext)
 {
     int pipefd[2];
     struct pipeFd pushback;
@@ -342,6 +350,7 @@ void CreateNewPipe(int pipeNum ,int &enter , vector<pipeFd> &pipeTable)
     pushback.EnterPipe = pipefd[1];
     pushback.OutPipe = pipefd[0];
     pushback.count = pipeNum;
+    pushback.toNext = PipeToNext;
     pipeTable.push_back(pushback);
     
 }
@@ -467,6 +476,7 @@ void RunShell(int sockfd)
     
     bool PipeToSame ;
     
+    
     vector<pipeFd> pipeTable; // Keep Pipes Info.
     vector<string> pathTable; // Keep Paths .
     
@@ -483,15 +493,16 @@ void RunShell(int sockfd)
         while(it_line != after_split_line.end() && *it_line != "\0")
         {
             int infd = sockfd  , outfd = sockfd , errfd = sockfd;
+            bool PipeToNext = false;
             Sign sign = NONE;
             
-            ParseCmd(after_split_line, it_line, arg_table, cmd, pipeNum, pipeErrNum, sign);
+            ParseCmd(after_split_line, it_line, arg_table, cmd, pipeNum, pipeErrNum, sign, PipeToNext);
             
             
             if(!LegalCmd(cmd,pathTable))
             {
                 EraseNonUsePipe(pipeTable);
-                SubPipeCount(pipeTable);
+                //SubPipeCount(pipeTable);
                 ArgtableReset(arg_table);
                 cout << "Unknown command: [" << cmd << "]." << endl;
                 break;
@@ -506,23 +517,26 @@ void RunShell(int sockfd)
                 //    因為若有hasinpipe , 會先close掉入口(4) , 然後剛好又沒有pipesame , 新pipe pipe2出口將會在4(enter=5,out=4)
                 //    接著最後會Run EraseNonUsePipe , pipe1 會被erase且close其fd , 所以3,4被close => 關到pipe2的出口4 !
                 
-                PipeToSameSetting(pipeTable, pipeNum, outfd, PipeToSame);
+                if(!PipeToNext)
+                    PipeToSameSetting(pipeTable, pipeNum, outfd, PipeToSame);
                 
                 if(!PipeToSame)
-                    CreateNewPipe(pipeNum, outfd, pipeTable);
+                    CreateNewPipe(pipeNum, outfd, pipeTable,PipeToNext);
                 
                 StdInSetting(infd,hasInPipe, pipeTable);
                 
             }
             else if(sign == ERRPIPE)
             {
-                PipeToSameSetting(pipeTable, pipeErrNum, errfd, PipeToSame);
+                if(!PipeToNext)
+                    PipeToSameSetting(pipeTable, pipeErrNum, errfd, PipeToSame);
                 
                 if(!PipeToSame)
                 {
-                    CreateNewPipe(pipeErrNum, errfd, pipeTable);
+                    CreateNewPipe(pipeErrNum, errfd, pipeTable,PipeToNext);
                     outfd = errfd ;
                 }
+                
                 
                 StdInSetting(infd,hasInPipe, pipeTable);
                 
@@ -530,16 +544,18 @@ void RunShell(int sockfd)
             else if(sign == PIPE_ERRPIPE)
             {
                 // for StdOutPipe.
-                PipeToSameSetting(pipeTable, pipeNum, outfd, PipeToSame);
+                if(!PipeToNext)
+                    PipeToSameSetting(pipeTable, pipeNum, outfd, PipeToSame);
                 
                 if(!PipeToSame)
-                    CreateNewPipe(pipeNum, outfd, pipeTable);
+                    CreateNewPipe(pipeNum, outfd, pipeTable, PipeToNext);
                 
                 // for ErrPipe.
-                PipeToSameSetting(pipeTable, pipeErrNum, errfd, PipeToSame);
+                if(!PipeToNext)
+                    PipeToSameSetting(pipeTable, pipeErrNum, errfd, PipeToSame);
                 
                 if(!PipeToSame)
-                    CreateNewPipe(pipeErrNum, errfd, pipeTable);
+                    CreateNewPipe(pipeErrNum, errfd, pipeTable, PipeToNext);
                 
                 
                 StdInSetting(infd,hasInPipe, pipeTable);
@@ -584,7 +600,7 @@ void RunShell(int sockfd)
                     }
                     
                     EraseNonUsePipe(pipeTable);
-                    SubPipeCount(pipeTable);
+                    //SubPipeCount(pipeTable);
                     ArgtableReset(arg_table);
                     break;
                 }
@@ -607,10 +623,21 @@ void RunShell(int sockfd)
             //fclose(outfile);
             
             EraseNonUsePipe(pipeTable);
-            SubPipeCount(pipeTable);
+            
+            if(PipeToNext)
+            {
+                vector<pipeFd>::iterator it = pipeTable.begin();
+                while(it != pipeTable.end())
+                {
+                    if((*it).toNext == true)
+                        (*it).count -- ;
+                    it++;
+                }
+            }
             ArgtableReset(arg_table);
-        }
         
+        }
+        SubPipeCount(pipeTable);
         ArgtableReset(arg_table);
         
     }while(1);
