@@ -509,6 +509,7 @@ void RunShell(int sockfd)
             }
             
             bool hasInPipe = false;
+            PipeToSame = false;
             
             
             if(sign == PIPE)
