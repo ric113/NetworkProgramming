@@ -532,12 +532,11 @@ void RunShell(int sockfd)
                 if(!PipeToNext)
                     PipeToSameSetting(pipeTable, pipeErrNum, errfd, PipeToSame);
                 
-                if(!PipeToSame)
-                {
-                    CreateNewPipe(pipeErrNum, errfd, pipeTable,PipeToNext);
-                    outfd = errfd ;
-                }
                 
+                if(!PipeToSame)
+                    CreateNewPipe(pipeErrNum, errfd, pipeTable,PipeToNext);
+                
+                outfd = errfd ; // stderr & stdout 皆 Pipe 出去 .
                 
                 StdInSetting(infd,hasInPipe, pipeTable);
                 
