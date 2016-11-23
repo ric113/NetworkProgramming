@@ -275,6 +275,7 @@ void Exit()
 {
     BroadCast("",EXIT,-1);
     currentClient->pid = -1;
+    currentClient->uid = -1;
     UpdateTables();
 }
 
