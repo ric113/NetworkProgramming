@@ -19,4 +19,8 @@
   * Part 3 : HTTP Server + CGI(same as Part1) using Winsock (in Visual Studio).
 
 See "hw3_spec.txt" and "notes.txt" to know how to use them , 
-see pdfs to know the concept about Http Server/CGI/Winsock .
+see pdfs to know the concept about Http Server/CGI/Winsock , here are some references :
+  
+  * About socket blocking/Non-blocking/Sync/Async :
+      http://blog.csdn.net/hguisu/article/details/7453390
+  * Winsock tutorial (in Chinese): See pdf/WinsockTutorial.pdf
