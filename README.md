@@ -16,4 +16,7 @@
 ### Project 3.
   * Part 1 : A simple CGI program for connecting to Project1/2 Server (in C/C++) .
   * Part 2 : A simple HTTP Server for processing .html and Part1 CGI .
-  * Part 3 : HTTP Server + CGI(same as Part1) using Winsock .
+  * Part 3 : HTTP Server + CGI(same as Part1) using Winsock (in Visual Studio).
+
+See "hw3_spec.txt" and "notes.txt" to know how to use them , 
+see pdfs to know the concept about Http Server/CGI/Winsock .
