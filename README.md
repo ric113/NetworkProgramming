@@ -13,7 +13,7 @@
   see "Hw2_spec_append.txt" to get some extra rules .
   Use delayclient.c(by tutor) to test the server .
 
-### Project 3.
+### Project 3 .
   * Part 1 : A simple CGI program for connecting to Project1/2 Server (in C/C++) .
   * Part 2 : A simple HTTP Server for processing .html and Part1 CGI .
   * Part 3 : HTTP Server + CGI(same as Part1) using Winsock (in Visual Studio).
@@ -24,3 +24,10 @@ see pdfs to know the concept about Http Server/CGI/Winsock , here are some refer
   * About socket blocking/Non-blocking/Sync/Async :
       http://blog.csdn.net/hguisu/article/details/7453390
   * Winsock tutorial (in Chinese): See pdf/WinsockTutorial.pdf
+  
+### Project 4 .
+  * Part 1 : A simple Proxy Server (Using SOCKS4) with two mode : CONNECT & BIND , also supports firewall .
+  * Part 2 : Modify Project 3's CGI program to Proxy version (SOCKS4 client) .
+  
+See "NP_project4.doc" and "DetailSpec.doc" to get more information about this project ,
+see "Socks_server.pttx" to know some concept about SOCKS4(Proxy) .
